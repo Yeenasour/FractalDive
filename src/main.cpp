@@ -13,6 +13,7 @@ int main() {
 	glfwMakeContextCurrent(window);
 
 	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		std::cout << "OpenGL failed to load" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
