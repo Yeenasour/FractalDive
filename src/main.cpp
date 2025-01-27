@@ -95,19 +95,23 @@ int main()
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
 	float position[] = {
-		-0.5f, -0.5f,
-		 0.0f,  0.5f,
-		 0.5f, -0.5f
+		-1.0f, -1.0f,
+		 1.0f,  1.0f,
+		 1.0f, -1.0f,
+		-1.0f,  1.0f,
 	};
 
 	GLuint vertecies;
 	glGenBuffers(1, &vertecies);
 	glBindBuffer(GL_ARRAY_BUFFER, vertecies);
-	glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), position, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), position, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
 	float col[] = {
+		1.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 1.0f,
 		1.0f, 1.0f, 0.0f,
 		0.0f, 1.0f, 1.0f,
 		1.0f, 0.0f, 1.0f
@@ -116,20 +120,31 @@ int main()
 	GLuint colors;
 	glGenBuffers(1, &colors);
 	glBindBuffer(GL_ARRAY_BUFFER, colors);
-	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(float), col, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 9 * 2 * sizeof(float), col, GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
+
+	unsigned int indicies[] = {
+		0, 2, 1,
+		0, 1, 3
+	};
+
+	GLuint index;
+	glGenBuffers(1, &index);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indicies, GL_STATIC_DRAW);
 
 	std::string vertexShader = readFile("../src/shaders/shader.vert");
 	std::string fragmentShader = readFile("../src/shaders/shader.frag");
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
+	glEnable(GL_CULL_FACE);
 
 	while (!glfwWindowShouldClose(window)) 
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
 		glfwSwapBuffers(window);
 
