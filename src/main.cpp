@@ -68,7 +68,12 @@ static GLuint CreateShaderProgram(const std::string& vertexShader, const std::st
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 
-	// might want to modify the projection matricies
+	int oldWidth, oldHeight;
+	glfwGetWindowSize(window, &oldWidth, &oldHeight);
+	int dw = width - oldWidth;
+	int dh = height - oldHeight;
+
+	// continue later with this
 }
 
 int main()
@@ -81,7 +86,7 @@ int main()
 	}
 
 	//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-	window = glfwCreateWindow(640, 480, "My Window", NULL, NULL);
+	window = glfwCreateWindow(1080, 1080, "My Window", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
