@@ -2,9 +2,9 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <iostream>
-//#include <imgui/imgui.h>
-//#include <imgui/backends/imgui_impl_glfw.h>
-//#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 
 #include <fstream>
 #include <sstream>
@@ -91,6 +91,15 @@ int main()
 
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init();
+
 	if (glewInit() != GLEW_OK)
 	{
 		std::cout << "GLEW failed to initialize" << std::endl;
@@ -143,19 +152,38 @@ int main()
 	std::string fragmentShader = readFile("../src/shaders/shader.frag");
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
+
+	glUniform1f(glGetUniformLocation(program, "u_xMin"), -2.0f);
+	glUniform1f(glGetUniformLocation(program, "u_xMax"),  1.0f);
+	glUniform1f(glGetUniformLocation(program, "u_yMin"), -1.5f);
+	glUniform1f(glGetUniformLocation(program, "u_yMax"),  1.5f);
+	glUniform1i(glGetUniformLocation(program, "u_MAX_ITERATIONS"), 128);
+
 	glEnable(GL_CULL_FACE);
 
 	while (!glfwWindowShouldClose(window)) 
 	{
+		glfwPollEvents();
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		ImGui::ShowDemoWindow();
+
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
-		glfwSwapBuffers(window);
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		glfwPollEvents();
+		glfwSwapBuffers(window);
 	}
 	
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;
 }

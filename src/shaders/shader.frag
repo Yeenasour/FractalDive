@@ -4,11 +4,11 @@ in vec3 fragmentColor;
 in vec2 position;
 
 // make these into uniforms
-float xMin = -2;
-float xMax = 1;
-float yMin = -1.5;
-float yMax = 1.5;
-int MAX_ITERATIONS = 128;
+uniform float u_xMin;
+uniform float u_xMax;
+uniform float u_yMin;
+uniform float u_yMax;
+uniform int u_MAX_ITERATIONS;
 //vec2 resolution = vec2() / might be a QOL improvement later
 
 out vec4 screenColor;
@@ -26,19 +26,19 @@ float map(float x, float inMin, float inMax, float outMin, float outMax) {
 }
 
 void main() {
-	float Re = map(position.x, -1.0, 1.0, xMin, xMax);
-	float Im = map(position.y, -1.0, 1.0, yMin, yMax);
+	float Re = map(position.x, -1.0, 1.0, u_xMin, u_xMax);
+	float Im = map(position.y, -1.0, 1.0, u_yMin, u_yMax);
 	vec2 c = vec2(Re, Im);
 	vec2 z = vec2(0.0);
 	int iter = 0;
-	while (length(z) < 2.0 && iter < MAX_ITERATIONS) {
+	while (length(z) < 2.0 && iter < u_MAX_ITERATIONS) {
 		z = compMul(z,z);
 		z = compAdd(z,c);
 		iter++;
 	}
-	if (iter == MAX_ITERATIONS) {
+	if (iter == u_MAX_ITERATIONS) {
 		screenColor = vec4(fragmentColor, 1.0);
 	} else {	// perhaps use a better/clearer visualization
-		screenColor = vec4(vec3(map(iter, 0.0, MAX_ITERATIONS, 0.0, 1.0)), 1.0);
+		screenColor = vec4(vec3(map(iter, 0.0, u_MAX_ITERATIONS, 0.0, 1.0)), 1.0);
 	}
 }
