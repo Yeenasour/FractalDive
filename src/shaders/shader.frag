@@ -44,8 +44,11 @@ void main() {
 		iter++;
 	}
 	if (iter == u_MAX_ITERATIONS) {
-		screenColor = vec4(fragmentColor, 1.0);
-	} else {	// perhaps use a better/clearer visualization
-		screenColor = vec4(vec3(map(iter, 0.0, u_MAX_ITERATIONS, 0.0, 1.0)), 1.0);
+		//screenColor = vec4(fragmentColor, 1.0);
+		screenColor = vec4(vec3(0.0), 1.0);
+	} else {
+        float t = 3.14159265 * float(iter) / float(u_MAX_ITERATIONS);
+        
+        screenColor = vec4(vec3(0.5 + 0.5 * cos(t * 6.28), 0.5 + 0.5 * sin(t * 6.28), 0.5), 1.0);
 	}
 }
