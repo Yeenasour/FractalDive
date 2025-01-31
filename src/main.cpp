@@ -14,7 +14,8 @@
 
 struct WindowState
 {
-	float xMin, xMax, yMin, yMax;
+	double xMin, xMax, yMin, yMax;
+	int w, h;
 };
 
 static std::string readFile(const std::string& filePath) {
@@ -75,6 +76,9 @@ static GLuint CreateShaderProgram(const std::string& vertexShader, const std::st
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+	ws->w = width;
+	ws->h = height;
 
 	int oldWidth, oldHeight;
 	glfwGetWindowSize(window, &oldWidth, &oldHeight);
@@ -98,50 +102,28 @@ GLint getUniformLocation(GLuint program, const std::string& name, std::unordered
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-	static float zoomInFactor = 0.9;
-	constexpr static float zoomOutFactor = 1.0 / 0.9;
+	static double zoomInFactor = 0.9;
+	constexpr static double zoomOutFactor = 1.0 / 0.9;
 	
-	//Used to 
-	/*	TODO in the future, zoom in and out from the point of the cursor.
 	double xPos, yPos;
 	glfwGetCursorPos(window, &xPos, &yPos);
 
-	// Assuming we have a current cursor position (cursorX, cursorY)
-	float scaleX = (xPos - ws->xMin) / (ws->xMax - ws->xMin);
-	float scaleY = (yPos - ws->yMin) / (ws->yMax - ws->yMin);
+    double xCursor = ws->xMin + (xPos / ws->w) * (ws->xMax - ws->xMin);
+    double yCursor = ws->yMax - (yPos / ws->h) * (ws->yMax - ws->yMin);
 
-	// Apply zoom factor
-	xmin = cursorX - scaleX * (xmax - xmin) * zoomFactor;
-	xmax = cursorX + (1 - scaleX) * (xmax - xmin) * zoomFactor;
-	ymin = cursorY - scaleY * (ymax - ymin) * zoomFactor;
-	ymax = cursorY + (1 - scaleY) * (ymax - ymin) * zoomFactor;
-
-	// Adjust the other axis to maintain the aspect ratio
-	float newAspect = (xmax - xmin) / (ymax - ymin);
-	if (newAspect > 1.0) {
-	    float delta = (xmax - xmin) / aspectRatio - (ymax - ymin);
-	    ymin -= delta / 2;
-	    ymax += delta / 2;
-	} else {
-	    float delta = (ymax - ymin) * aspectRatio - (xmax - xmin);
-	    xmin -= delta / 2;
-	    xmax += delta / 2;
-	}*/
-	std::cout << yoffset << std::endl;
-
-	if (yoffset < 0)
+	if (yoffset > 0)
 	{
-		ws->xMin *= zoomOutFactor;
-		ws->xMax *= zoomOutFactor;
-		ws->yMin *= zoomOutFactor;
-		ws->yMax *= zoomOutFactor;
+		ws->xMin = xCursor - (xCursor - ws->xMin) * zoomInFactor;
+    	ws->xMax = xCursor + (ws->xMax - xCursor) * zoomInFactor;
+    	ws->yMin = yCursor - (yCursor - ws->yMin) * zoomInFactor;
+    	ws->yMax = yCursor + (ws->yMax - yCursor) * zoomInFactor;
 	}
 	else
 	{
-		ws->xMin *= zoomInFactor;
-		ws->xMax *= zoomInFactor;
-		ws->yMin *= zoomInFactor;
-		ws->yMax *= zoomInFactor;
+		ws->xMin = xCursor - (xCursor - ws->xMin) * zoomOutFactor;
+    	ws->xMax = xCursor + (ws->xMax - xCursor) * zoomOutFactor;
+    	ws->yMin = yCursor - (yCursor - ws->yMin) * zoomOutFactor;
+    	ws->yMax = yCursor + (ws->yMax - yCursor) * zoomOutFactor;
 	}
 }
 
@@ -150,7 +132,7 @@ int main()
 	GLFWwindow* window;
 
 	int maxIterations = 128;
-	WindowState ws = {-2.0f, 1.0f, -1.5f, 1.5f};
+	WindowState ws = {-2.0, 1.0, -1.5, 1.5, 1080, 1080};
 
 	std::unordered_map<std::string, GLint> uniformCache;
 
@@ -160,7 +142,7 @@ int main()
 	}
 
 	//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-	window = glfwCreateWindow(1080, 1080, "My Window", NULL, NULL);
+	window = glfwCreateWindow(ws.w, ws.h, "My Window", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	glfwSetWindowUserPointer(window, &ws);
@@ -185,21 +167,21 @@ int main()
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
-	float position[] = {
-		-1.0f, -1.0f,
-		 1.0f,  1.0f,
-		 1.0f, -1.0f,
-		-1.0f,  1.0f,
+	double position[] = {
+		-1.0, -1.0,
+		 1.0,  1.0,
+		 1.0, -1.0,
+		-1.0,  1.0,
 	};
 
 	GLuint vertecies;
 	glGenBuffers(1, &vertecies);
 	glBindBuffer(GL_ARRAY_BUFFER, vertecies);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), position, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(double), position, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_DOUBLE, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	float col[] = {
+	double col[] = {
 		1.0f, 1.0f, 0.0f,
 		0.0f, 1.0f, 1.0f,
 		1.0f, 0.0f, 1.0f,
@@ -211,8 +193,8 @@ int main()
 	GLuint colors;
 	glGenBuffers(1, &colors);
 	glBindBuffer(GL_ARRAY_BUFFER, colors);
-	glBufferData(GL_ARRAY_BUFFER, 9 * 2 * sizeof(float), col, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, 9 * 2 * sizeof(double), col, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 3, GL_DOUBLE, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
 
 	unsigned int indicies[] = {
@@ -230,10 +212,10 @@ int main()
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
 
-	glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
-	glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
-	glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
-	glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+	glUniform1d(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
+	glUniform1d(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
+	glUniform1d(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
+	glUniform1d(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 
 	glEnable(GL_CULL_FACE);
@@ -252,10 +234,10 @@ int main()
 		}
 
 		// TODO find a nice way to only update uniforms on zoom or translation
-		glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
-		glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
-		glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
-		glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+		glUniform1d(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
+		glUniform1d(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
+		glUniform1d(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
+		glUniform1d(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
