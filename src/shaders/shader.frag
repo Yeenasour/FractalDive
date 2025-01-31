@@ -25,7 +25,7 @@ float map(float x, float inMin, float inMax, float outMin, float outMax) {
 	return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
 
-void main() {
+void main() {	//TODO Instead of mapping, perhaps we can divide by resolution vector and shift it to be between -1 and 1
 	float Re = map(position.x, -1.0, 1.0, u_xMin, u_xMax);
 	float Im = map(position.y, -1.0, 1.0, u_yMin, u_yMax);
 	vec2 c = vec2(Re, Im);

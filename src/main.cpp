@@ -9,6 +9,13 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+
+
+struct WindowState
+{
+	float xMin, xMax, yMin, yMax;
+};
 
 static std::string readFile(const std::string& filePath) {
     std::ifstream file(filePath);
@@ -65,7 +72,8 @@ static GLuint CreateShaderProgram(const std::string& vertexShader, const std::st
 	return program;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
     glViewport(0, 0, width, height);
 
 	int oldWidth, oldHeight;
@@ -76,9 +84,75 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	// continue later with this
 }
 
+GLint getUniformLocation(GLuint program, const std::string& name, std::unordered_map<std::string, GLint>& uniformCache)
+{
+    if (uniformCache.find(name) != uniformCache.end()) {
+        return uniformCache[name];
+    }
+    
+    GLint location = glGetUniformLocation(program, name.c_str());
+    uniformCache[name] = location;
+    return location;
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+	static float zoomInFactor = 0.9;
+	constexpr static float zoomOutFactor = 1.0 / 0.9;
+	
+	//Used to 
+	/*	TODO in the future, zoom in and out from the point of the cursor.
+	double xPos, yPos;
+	glfwGetCursorPos(window, &xPos, &yPos);
+
+	// Assuming we have a current cursor position (cursorX, cursorY)
+	float scaleX = (xPos - ws->xMin) / (ws->xMax - ws->xMin);
+	float scaleY = (yPos - ws->yMin) / (ws->yMax - ws->yMin);
+
+	// Apply zoom factor
+	xmin = cursorX - scaleX * (xmax - xmin) * zoomFactor;
+	xmax = cursorX + (1 - scaleX) * (xmax - xmin) * zoomFactor;
+	ymin = cursorY - scaleY * (ymax - ymin) * zoomFactor;
+	ymax = cursorY + (1 - scaleY) * (ymax - ymin) * zoomFactor;
+
+	// Adjust the other axis to maintain the aspect ratio
+	float newAspect = (xmax - xmin) / (ymax - ymin);
+	if (newAspect > 1.0) {
+	    float delta = (xmax - xmin) / aspectRatio - (ymax - ymin);
+	    ymin -= delta / 2;
+	    ymax += delta / 2;
+	} else {
+	    float delta = (ymax - ymin) * aspectRatio - (xmax - xmin);
+	    xmin -= delta / 2;
+	    xmax += delta / 2;
+	}*/
+	std::cout << yoffset << std::endl;
+
+	if (yoffset < 0)
+	{
+		ws->xMin *= zoomOutFactor;
+		ws->xMax *= zoomOutFactor;
+		ws->yMin *= zoomOutFactor;
+		ws->yMax *= zoomOutFactor;
+	}
+	else
+	{
+		ws->xMin *= zoomInFactor;
+		ws->xMax *= zoomInFactor;
+		ws->yMin *= zoomInFactor;
+		ws->yMax *= zoomInFactor;
+	}
+}
+
 int main()
 {
 	GLFWwindow* window;
+
+	int maxIterations = 128;
+	WindowState ws = {-2.0f, 1.0f, -1.5f, 1.5f};
+
+	std::unordered_map<std::string, GLint> uniformCache;
 
 	if (!glfwInit()) {
 		std::cout << "GLFW failed to initialize" << std::endl;
@@ -89,7 +163,10 @@ int main()
 	window = glfwCreateWindow(1080, 1080, "My Window", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
+	glfwSetWindowUserPointer(window, &ws);
+
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetScrollCallback(window, scroll_callback);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -153,11 +230,11 @@ int main()
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
 
-	glUniform1f(glGetUniformLocation(program, "u_xMin"), -2.0f);
-	glUniform1f(glGetUniformLocation(program, "u_xMax"),  1.0f);
-	glUniform1f(glGetUniformLocation(program, "u_yMin"), -1.5f);
-	glUniform1f(glGetUniformLocation(program, "u_yMax"),  1.5f);
-	glUniform1i(glGetUniformLocation(program, "u_MAX_ITERATIONS"), 128);
+	glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
+	glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
+	glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
+	glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 
 	glEnable(GL_CULL_FACE);
 
@@ -168,7 +245,17 @@ int main()
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
+
+		if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024)) {
+			glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
+		}
+
+		// TODO find a nice way to only update uniforms on zoom or translation
+		glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
+		glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
+		glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
+		glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
