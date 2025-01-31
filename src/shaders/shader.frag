@@ -1,13 +1,15 @@
 #version 430 core
 
+precision highp float;
+
 in vec3 fragmentColor;
 in vec2 position;
 
 // make these into uniforms
-uniform double u_xMin;
-uniform double u_xMax;
-uniform double u_yMin;
-uniform double u_yMax;
+uniform float u_xMin;
+uniform float u_xMax;
+uniform float u_yMin;
+uniform float u_yMax;
 uniform int u_MAX_ITERATIONS;
 //vec2 resolution = vec2() / might be a QOL improvement later
 
@@ -21,13 +23,18 @@ vec2 compMul(vec2 z1, vec2 z2) {
 	return vec2((z1.x * z2.x) - (z1.y * z2.y), (z1.x * z2.y) + (z1.y * z2.x));
 }
 
-double map(double x, double inMin, double inMax, double outMin, double outMax) {
+float map(float x, float inMin, float inMax, float outMin, float outMax) {
 	return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
 
-void main() {	//TODO Instead of mapping, perhaps we can divide by resolution vector and shift it to be between -1 and 1
-	double Re = map(position.x, -1.0, 1.0, u_xMin, u_xMax);
-	double Im = map(position.y, -1.0, 1.0, u_yMin, u_yMax);
+void main() {
+
+	float normalizedX = (position.x * 0.5) + 0.5;
+	float normalizedY = (position.y * 0.5) + 0.5;
+	
+	float Re = mix(u_xMin, u_xMax, normalizedX);
+	float Im = mix(u_yMin, u_yMax, normalizedY);
+
 	vec2 c = vec2(Re, Im);
 	vec2 z = vec2(0.0);
 	int iter = 0;

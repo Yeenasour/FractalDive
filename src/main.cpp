@@ -167,21 +167,21 @@ int main()
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
-	double position[] = {
-		-1.0, -1.0,
-		 1.0,  1.0,
-		 1.0, -1.0,
-		-1.0,  1.0,
+	float position[] = {
+		-1.0f, -1.0f,
+		 1.0f,  1.0f,
+		 1.0f, -1.0f,
+		-1.0f,  1.0f,
 	};
 
 	GLuint vertecies;
 	glGenBuffers(1, &vertecies);
 	glBindBuffer(GL_ARRAY_BUFFER, vertecies);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(double), position, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_DOUBLE, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), position, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	double col[] = {
+	float col[] = {
 		1.0f, 1.0f, 0.0f,
 		0.0f, 1.0f, 1.0f,
 		1.0f, 0.0f, 1.0f,
@@ -193,8 +193,8 @@ int main()
 	GLuint colors;
 	glGenBuffers(1, &colors);
 	glBindBuffer(GL_ARRAY_BUFFER, colors);
-	glBufferData(GL_ARRAY_BUFFER, 9 * 2 * sizeof(double), col, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_DOUBLE, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, 9 * 2 * sizeof(float), col, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
 
 	unsigned int indicies[] = {
@@ -212,10 +212,10 @@ int main()
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
 
-	glUniform1d(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
-	glUniform1d(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
-	glUniform1d(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
-	glUniform1d(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+	glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
+	glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
+	glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
+	glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 
 	glEnable(GL_CULL_FACE);
@@ -234,10 +234,10 @@ int main()
 		}
 
 		// TODO find a nice way to only update uniforms on zoom or translation
-		glUniform1d(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
-		glUniform1d(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
-		glUniform1d(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
-		glUniform1d(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+		glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
+		glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
+		glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
+		glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
