@@ -142,7 +142,7 @@ int main()
 	}
 
 	//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-	window = glfwCreateWindow(ws.w, ws.h, "My Window", NULL, NULL);
+	window = glfwCreateWindow(ws.w, ws.h, "FractalDive", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	glfwSetWindowUserPointer(window, &ws);
