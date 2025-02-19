@@ -19,6 +19,13 @@ struct WindowState
 	int w, h;
 };
 
+struct ApplicationState
+{
+	WindowState window;
+	bool inputHeld;
+	char key;
+};
+
 static std::string readFile(const std::string& filePath) {
     std::ifstream file(filePath);
     if (!file.is_open()) {
@@ -88,14 +95,14 @@ GLint getUniformLocation(GLuint program, const std::string& name, std::unordered
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+	WindowState* ws = &(static_cast<ApplicationState*>(glfwGetWindowUserPointer(window)))->window;
 	ws->w = width;
 	ws->h = height;
 }
 
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+	WindowState* ws = &(static_cast<ApplicationState*>(glfwGetWindowUserPointer(window)))->window;
 	static double zoomInFactor = 1.1;
 	constexpr static double zoomOutFactor = 1.0 / 1.1;
 
@@ -108,27 +115,54 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 		if (ws->zoom <= 1) return;
 		ws->zoom *= zoomOutFactor;
 	}
-	std::cout << ws->zoom << std::endl;
 }
 
-//TODO improve this to enable holding of keys, utilize states
+//TODO make movement less "clunky", enable independent movement in both x and y direction.
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (action != GLFW_PRESS) return;
-	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-	float moveFactor = 0.01 * (1 / ws->zoom);
+	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
+	if (action != GLFW_PRESS)
+	{
+		as->key = -1;
+		as->inputHeld = false;
+		return;
+	}
+	as->inputHeld = true;
 	switch (key)
 	{
 	case GLFW_KEY_W:
-		ws->cy += moveFactor;
+		as->key = 1;
 		break;
 	case GLFW_KEY_A:
-		ws->cx -= moveFactor;
+		as->key = 2;
 		break;
 	case GLFW_KEY_S:
-		ws->cy -= moveFactor;
+		as->key = 3;
 		break;
 	case GLFW_KEY_D:
+		as->key = 4;
+		break;
+	default:	//TODO add esc to close application
+		break;
+	}
+}
+
+void handleMovement(GLFWwindow* window, int key)
+{
+	WindowState* ws = &(static_cast<ApplicationState*>(glfwGetWindowUserPointer(window)))->window;
+	float moveFactor = 0.01 / ws->zoom;
+	switch (key)
+	{
+	case 1:
+		ws->cy += moveFactor;
+		break;
+	case 2:
+		ws->cx -= moveFactor;
+		break;
+	case 3:
+		ws->cy -= moveFactor;
+		break;
+	case 4:
 		ws->cx += moveFactor;
 		break;
 	default:
@@ -141,7 +175,7 @@ int main()
 	GLFWwindow* window;
 
 	int maxIterations = 128;
-	WindowState ws = {-0.5, 0, 2.0, 1080, 1080};
+	ApplicationState applicationState = {{-0.5, 0, 2.0, 1080, 1080}, false, -1};
 
 	std::unordered_map<std::string, GLint> uniformCache;
 
@@ -151,11 +185,10 @@ int main()
 	}
 
 	//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-	window = glfwCreateWindow(ws.w, ws.h, "FractalDive", NULL, NULL);
+	window = glfwCreateWindow(applicationState.window.w, applicationState.window.h, "FractalDive", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
-	glfwSetWindowUserPointer(window, &ws);
-
+	glfwSetWindowUserPointer(window, &applicationState);
 	
 	//TODO mouse movement
 	glfwSetKeyCallback(window, keyCallback);
@@ -224,9 +257,9 @@ int main()
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
 
-	glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), ws.zoom);
-	glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), ws.w, ws.h);
-	glUniform2f(getUniformLocation(program, "u_center", uniformCache), ws.cx, ws.cy);
+	glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
+	glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
+	glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 
 	glEnable(GL_CULL_FACE);
@@ -234,6 +267,8 @@ int main()
 	while (!glfwWindowShouldClose(window)) 
 	{
 		glfwPollEvents();
+
+		if (applicationState.inputHeld) handleMovement(window, applicationState.key);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -243,9 +278,9 @@ int main()
 			glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 		}
 
-		glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), ws.zoom);
-		glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), ws.w, ws.h);
-		glUniform2f(getUniformLocation(program, "u_center", uniformCache), ws.cx, ws.cy);
+		glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
+		glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
+		glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
