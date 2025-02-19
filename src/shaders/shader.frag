@@ -6,10 +6,9 @@ in vec3 fragmentColor;
 in vec2 position;
 
 // make these into uniforms
-uniform float u_xMin;
-uniform float u_xMax;
-uniform float u_yMin;
-uniform float u_yMax;
+uniform vec2 u_resolution;
+uniform vec2 u_center;
+uniform float u_zoom;
 uniform int u_MAX_ITERATIONS;
 //vec2 resolution = vec2() / might be a QOL improvement later
 
@@ -29,13 +28,15 @@ float map(float x, float inMin, float inMax, float outMin, float outMax) {
 
 void main() {
 
-	float normalizedX = (position.x * 0.5) + 0.5;
-	float normalizedY = (position.y * 0.5) + 0.5;
+	//float normalizedX = (position.x * 0.5) + 0.5;
+	//float normalizedY = (position.y * 0.5) + 0.5;
 	
-	float Re = mix(u_xMin, u_xMax, normalizedX);
-	float Im = mix(u_yMin, u_yMax, normalizedY);
+	//float Re = mix(u_xMin, u_xMax, normalizedX);
+	//float Im = mix(u_yMin, u_yMax, normalizedY);
 
-	vec2 c = vec2(Re, Im);
+	//vec2 c = vec2(Re, Im) / u_zoom;
+	float aspectRatio = u_resolution.x / u_resolution.y;
+	vec2 c = u_center + (position) * vec2(4.0 * aspectRatio, 4.0) / u_zoom;
 	vec2 z = vec2(0.0);
 	int iter = 0;
 	while (length(z) < 2.0 && iter < u_MAX_ITERATIONS) {

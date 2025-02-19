@@ -14,7 +14,8 @@
 
 struct WindowState
 {
-	double xMin, xMax, yMin, yMax;
+	float cx, cy;
+	float zoom;
 	int w, h;
 };
 
@@ -73,21 +74,6 @@ static GLuint CreateShaderProgram(const std::string& vertexShader, const std::st
 	return program;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-	ws->w = width;
-	ws->h = height;
-
-	int oldWidth, oldHeight;
-	glfwGetWindowSize(window, &oldWidth, &oldHeight);
-	int dw = width - oldWidth;
-	int dh = height - oldHeight;
-
-	// continue later with this
-}
-
 GLint getUniformLocation(GLuint program, const std::string& name, std::unordered_map<std::string, GLint>& uniformCache)
 {
     if (uniformCache.find(name) != uniformCache.end()) {
@@ -99,31 +85,54 @@ GLint getUniformLocation(GLuint program, const std::string& name, std::unordered
     return location;
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+void framebufferSizeCallback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+	ws->w = width;
+	ws->h = height;
+}
+
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-	static double zoomInFactor = 0.9;
-	constexpr static double zoomOutFactor = 1.0 / 0.9;
-	
-	double xPos, yPos;
-	glfwGetCursorPos(window, &xPos, &yPos);
-
-    double xCursor = ws->xMin + (xPos / ws->w) * (ws->xMax - ws->xMin);
-    double yCursor = ws->yMax - (yPos / ws->h) * (ws->yMax - ws->yMin);
+	static double zoomInFactor = 1.1;
+	constexpr static double zoomOutFactor = 1.0 / 1.1;
 
 	if (yoffset > 0)
 	{
-		ws->xMin = xCursor - (xCursor - ws->xMin) * zoomInFactor;
-    	ws->xMax = xCursor + (ws->xMax - xCursor) * zoomInFactor;
-    	ws->yMin = yCursor - (yCursor - ws->yMin) * zoomInFactor;
-    	ws->yMax = yCursor + (ws->yMax - yCursor) * zoomInFactor;
+		ws->zoom *= zoomInFactor;
 	}
 	else
 	{
-		ws->xMin = xCursor - (xCursor - ws->xMin) * zoomOutFactor;
-    	ws->xMax = xCursor + (ws->xMax - xCursor) * zoomOutFactor;
-    	ws->yMin = yCursor - (yCursor - ws->yMin) * zoomOutFactor;
-    	ws->yMax = yCursor + (ws->yMax - yCursor) * zoomOutFactor;
+		if (ws->zoom <= 1) return;
+		ws->zoom *= zoomOutFactor;
+	}
+	std::cout << ws->zoom << std::endl;
+}
+
+//TODO improve this to enable holding of keys, utilize states
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (action != GLFW_PRESS) return;
+	WindowState* ws = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+	float moveFactor = 0.01 * (1 / ws->zoom);
+	switch (key)
+	{
+	case GLFW_KEY_W:
+		ws->cy += moveFactor;
+		break;
+	case GLFW_KEY_A:
+		ws->cx -= moveFactor;
+		break;
+	case GLFW_KEY_S:
+		ws->cy -= moveFactor;
+		break;
+	case GLFW_KEY_D:
+		ws->cx += moveFactor;
+		break;
+	default:
+		break;
 	}
 }
 
@@ -132,7 +141,7 @@ int main()
 	GLFWwindow* window;
 
 	int maxIterations = 128;
-	WindowState ws = {-2.0, 1.0, -1.5, 1.5, 1080, 1080};
+	WindowState ws = {-0.5, 0, 2.0, 1080, 1080};
 
 	std::unordered_map<std::string, GLint> uniformCache;
 
@@ -147,8 +156,11 @@ int main()
 
 	glfwSetWindowUserPointer(window, &ws);
 
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetScrollCallback(window, scroll_callback);
+	
+	//TODO mouse movement
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+	glfwSetScrollCallback(window, scrollCallback);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -212,10 +224,9 @@ int main()
 	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
 	glUseProgram(program);
 
-	glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
-	glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
-	glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
-	glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+	glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), ws.zoom);
+	glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), ws.w, ws.h);
+	glUniform2f(getUniformLocation(program, "u_center", uniformCache), ws.cx, ws.cy);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 
 	glEnable(GL_CULL_FACE);
@@ -227,17 +238,14 @@ int main()
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		//ImGui::ShowDemoWindow();
 
 		if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024)) {
 			glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 		}
 
-		// TODO find a nice way to only update uniforms on zoom or translation
-		glUniform1f(getUniformLocation(program, "u_xMin", uniformCache), ws.xMin);
-		glUniform1f(getUniformLocation(program, "u_xMax", uniformCache), ws.xMax);
-		glUniform1f(getUniformLocation(program, "u_yMin", uniformCache), ws.yMin);
-		glUniform1f(getUniformLocation(program, "u_yMax", uniformCache), ws.yMax);
+		glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), ws.zoom);
+		glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), ws.w, ws.h);
+		glUniform2f(getUniformLocation(program, "u_center", uniformCache), ws.cx, ws.cy);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
