@@ -5,12 +5,10 @@ precision highp float;
 in vec3 fragmentColor;
 in vec2 position;
 
-// make these into uniforms
 uniform vec2 u_resolution;
 uniform vec2 u_center;
 uniform float u_zoom;
 uniform int u_MAX_ITERATIONS;
-//vec2 resolution = vec2() / might be a QOL improvement later
 
 out vec4 screenColor;
 
@@ -27,14 +25,6 @@ float map(float x, float inMin, float inMax, float outMin, float outMax) {
 }
 
 void main() {
-
-	//float normalizedX = (position.x * 0.5) + 0.5;
-	//float normalizedY = (position.y * 0.5) + 0.5;
-	
-	//float Re = mix(u_xMin, u_xMax, normalizedX);
-	//float Im = mix(u_yMin, u_yMax, normalizedY);
-
-	//vec2 c = vec2(Re, Im) / u_zoom;
 	float aspectRatio = u_resolution.x / u_resolution.y;
 	vec2 c = u_center + (position) * vec2(4.0 * aspectRatio, 4.0) / u_zoom;
 	vec2 z = vec2(0.0);
@@ -45,10 +35,9 @@ void main() {
 		iter++;
 	}
 	if (iter == u_MAX_ITERATIONS) {
-		//screenColor = vec4(fragmentColor, 1.0);
 		screenColor = vec4(vec3(0.0), 1.0);
 	} else {
-        float t = 3.14159265 * float(iter) / float(u_MAX_ITERATIONS);
+        float t = 2 * 3.14159265 * float(iter) / float(u_MAX_ITERATIONS);	//TODO swap MAX_ITERATIONS for a BASE_ITERATIONS to preserve the color distribution
         
         screenColor = vec4(vec3(0.5 + 0.5 * cos(t * 6.28), 0.5 + 0.5 * sin(t * 6.28), 0.5), 1.0);
 	}
