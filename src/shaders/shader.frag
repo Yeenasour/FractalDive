@@ -9,6 +9,7 @@ uniform vec2 u_resolution;
 uniform vec2 u_center;
 uniform float u_zoom;
 uniform int u_MAX_ITERATIONS;
+uniform int u_BASE_ITERATIONS;
 
 out vec4 screenColor;
 
@@ -37,7 +38,7 @@ void main() {
 	if (iter == u_MAX_ITERATIONS) {
 		screenColor = vec4(vec3(0.0), 1.0);
 	} else {
-        float t = 2 * 3.14159265 * float(iter) / float(u_MAX_ITERATIONS);	//TODO swap MAX_ITERATIONS for a BASE_ITERATIONS to preserve the color distribution
+        float t = 2 * 3.14159265 * float(iter) / float(u_BASE_ITERATIONS);	//TODO swap MAX_ITERATIONS for a BASE_ITERATIONS to preserve the color distribution
         
         screenColor = vec4(vec3(0.5 + 0.5 * cos(t * 6.28), 0.5 + 0.5 * sin(t * 6.28), 0.5), 1.0);
 	}

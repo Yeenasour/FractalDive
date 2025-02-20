@@ -148,6 +148,7 @@ int main()
 	GLFWwindow* window;
 
 	int maxIterations = 128;
+	int baseIterations = 128;
 	
 	std::unordered_map<int, bool> keyMap = {
 		{GLFW_KEY_W, false},
@@ -241,6 +242,7 @@ int main()
 	glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
 	glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
+	glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
 
 	glEnable(GL_CULL_FACE);
 
@@ -254,9 +256,15 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024)) {
+		if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024))
+		{
 			glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 		}
+		if (ImGui::SliderInt("U_BASE_ITERATIONS", &baseIterations, 1, 1024))
+		{
+			glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
+		}
+		
 
 		glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
 		glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
