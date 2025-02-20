@@ -22,8 +22,7 @@ struct WindowState
 struct ApplicationState
 {
 	WindowState window;
-	bool inputHeld;
-	char key;
+	std::unordered_map<int, bool>* keyMap;
 };
 
 static std::string readFile(const std::string& filePath) {
@@ -118,56 +117,30 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 }
 
 //TODO make movement less "clunky", enable independent movement in both x and y direction.
+//TODO add esc to close application
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
-	if (action != GLFW_PRESS)
+	if (action == GLFW_PRESS)
 	{
-		as->key = -1;
-		as->inputHeld = false;
-		return;
+		(*as->keyMap)[key] = true;
 	}
-	as->inputHeld = true;
-	switch (key)
+	else if (action == GLFW_RELEASE)
 	{
-	case GLFW_KEY_W:
-		as->key = 1;
-		break;
-	case GLFW_KEY_A:
-		as->key = 2;
-		break;
-	case GLFW_KEY_S:
-		as->key = 3;
-		break;
-	case GLFW_KEY_D:
-		as->key = 4;
-		break;
-	default:	//TODO add esc to close application
-		break;
+		(*as->keyMap)[key] = false;
 	}
 }
 
-void handleMovement(GLFWwindow* window, int key)
+void handleKeyMovement(ApplicationState &as)
 {
-	WindowState* ws = &(static_cast<ApplicationState*>(glfwGetWindowUserPointer(window)))->window;
-	float moveFactor = 0.01 / ws->zoom;
-	switch (key)
-	{
-	case 1:
-		ws->cy += moveFactor;
-		break;
-	case 2:
-		ws->cx -= moveFactor;
-		break;
-	case 3:
-		ws->cy -= moveFactor;
-		break;
-	case 4:
-		ws->cx += moveFactor;
-		break;
-	default:
-		break;
-	}
+	float moveSpeed = 0.05f / as.window.zoom;
+	float dy = 0.0f, dx = 0.0f;
+	if ((*as.keyMap)[GLFW_KEY_W]) dy += moveSpeed;
+	if ((*as.keyMap)[GLFW_KEY_A]) dx -= moveSpeed;
+	if ((*as.keyMap)[GLFW_KEY_S]) dy -= moveSpeed;
+	if ((*as.keyMap)[GLFW_KEY_D]) dx += moveSpeed;
+	as.window.cx += dx;
+	as.window.cy += dy;
 }
 
 int main()
@@ -175,7 +148,14 @@ int main()
 	GLFWwindow* window;
 
 	int maxIterations = 128;
-	ApplicationState applicationState = {{-0.5, 0, 2.0, 1080, 1080}, false, -1};
+	
+	std::unordered_map<int, bool> keyMap = {
+		{GLFW_KEY_W, false},
+		{GLFW_KEY_A, false},
+		{GLFW_KEY_S, false},
+		{GLFW_KEY_D, false}
+	};
+	ApplicationState applicationState = {{-0.5, 0, 2.0, 1080, 1080}, &keyMap};
 
 	std::unordered_map<std::string, GLint> uniformCache;
 
@@ -268,7 +248,7 @@ int main()
 	{
 		glfwPollEvents();
 
-		if (applicationState.inputHeld) handleMovement(window, applicationState.key);
+		handleKeyMovement(applicationState);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
