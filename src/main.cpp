@@ -23,6 +23,9 @@ struct ApplicationState
 {
 	WindowState window;
 	std::unordered_map<int, bool>* keyMap;
+	double mouseEnterX, mouseEnterY;
+	float dragStartCx, dragStartCy;
+	bool mouseHeld = false;
 };
 
 static std::string readFile(const std::string& filePath) {
@@ -116,19 +119,48 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 	}
 }
 
-//TODO make movement less "clunky", enable independent movement in both x and y direction.
-//TODO add esc to close application
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
-	if (action == GLFW_PRESS)
+	std::unordered_map<int, bool> *keyMap = as->keyMap;
+	if (keyMap->find(key) != keyMap->end())
 	{
-		(*as->keyMap)[key] = true;
+		if (action == GLFW_PRESS)
+		{
+			(*keyMap)[key] = true;
+		}
+		else if (action == GLFW_RELEASE)
+		{
+			(*keyMap)[key] = false;
+		}
 	}
-	else if (action == GLFW_RELEASE)
+	if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
 	{
-		(*as->keyMap)[key] = false;
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
 	}
+}
+
+void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
+{
+	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
+	if (as->mouseHeld)
+	{
+		double dx = as->mouseEnterX - xpos;
+        double dy = ypos - as->mouseEnterY;
+
+        as->window.cx = as->dragStartCx + (8 * dx / as->window.w) / as->window.zoom; 
+        as->window.cy = as->dragStartCy + (8 * dy / as->window.h) / as->window.zoom;
+	}
+}
+
+void mouseCallback(GLFWwindow* window, int button, int action, int mods)
+{
+	if (ImGui::GetIO().WantCaptureMouse) return;
+	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
+	as->mouseHeld = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
+	glfwGetCursorPos(window, &as->mouseEnterX, &as->mouseEnterY);
+	as->dragStartCx = as->window.cx;
+    as->dragStartCy = as->window.cy;
 }
 
 void handleKeyMovement(ApplicationState &as)
@@ -171,7 +203,8 @@ int main()
 
 	glfwSetWindowUserPointer(window, &applicationState);
 	
-	//TODO mouse movement
+	glfwSetCursorPosCallback(window, cursorPositionCallback);
+	glfwSetMouseButtonCallback(window, mouseCallback);
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 	glfwSetScrollCallback(window, scrollCallback);
@@ -246,37 +279,59 @@ int main()
 
 	glEnable(GL_CULL_FACE);
 
+	int maxFPS;
+
+	{
+		GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
+		maxFPS = mode->refreshRate;
+	}
+
+	int targetFPS = maxFPS;
+	float targetFrameTime = 1.0f / targetFPS;
+	double lastTime = glfwGetTime();
+
 	while (!glfwWindowShouldClose(window)) 
 	{
 		glfwPollEvents();
 
 		handleKeyMovement(applicationState);
+		double currentTime = glfwGetTime();
+		double deltaTime = currentTime - lastTime;
 
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+		if (deltaTime > targetFrameTime) {
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
 
-		if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024))
-		{
-			glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
+			if (ImGui::SliderInt("FPS Limit", &targetFPS, 1, maxFPS)) {
+				targetFrameTime = 1.0f / targetFPS;  // Update the target frame time
+			}
+			if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024))
+			{
+				glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
+			}
+			if (ImGui::SliderInt("U_BASE_ITERATIONS", &baseIterations, 1, 1024))
+			{
+				glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
+			}
+
+			glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
+			glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
+			glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
+
+
+				lastTime = currentTime;
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+
+
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+			glfwSwapBuffers(window);
 		}
-		if (ImGui::SliderInt("U_BASE_ITERATIONS", &baseIterations, 1, 1024))
-		{
-			glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
-		}
-
-		glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
-		glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
-		glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
-
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		glfwSwapBuffers(window);
 	}
 	
 	ImGui_ImplOpenGL3_Shutdown();
