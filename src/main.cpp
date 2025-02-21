@@ -264,7 +264,6 @@ int main()
 		{
 			glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
 		}
-		
 
 		glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
 		glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
