@@ -10,6 +10,8 @@ uniform vec2 u_center;
 uniform float u_zoom;
 uniform int u_MAX_ITERATIONS;
 uniform int u_BASE_ITERATIONS;
+uniform float u_saturation;
+uniform float u_brightness;
 
 out vec4 screenColor;
 
@@ -54,7 +56,7 @@ vec3 computeFragColor(vec2 uv) {
 	} else {
         float t = float(iter) / float(u_BASE_ITERATIONS);
 		float hue = mod(t * 5.0, 1.0);
-        color = hsvToRgb(hue, 1.0, 1.0);
+        color = hsvToRgb(hue, u_saturation, u_brightness);
 	}
 	return color;
 }

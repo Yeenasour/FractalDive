@@ -175,12 +175,20 @@ void handleKeyMovement(ApplicationState &as)
 	as.window.cy += dy;
 }
 
+/*
+	TODO Add support for both float and double in frag-shader
+			-buttons to switch during execution, and text-indicator
+	TODO Utilize compute shaders
+*/
+
 int main()
 {
 	GLFWwindow* window;
 
 	int maxIterations = 128;
 	int baseIterations = 128;
+	float saturation = 1.0f;
+	float brightness = 1.0f;
 	
 	std::unordered_map<int, bool> keyMap = {
 		{GLFW_KEY_W, false},
@@ -276,6 +284,8 @@ int main()
 	glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 	glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
+	glUniform1f(getUniformLocation(program, "u_saturation", uniformCache), saturation);
+	glUniform1f(getUniformLocation(program, "u_brightness", uniformCache), brightness);
 
 	glEnable(GL_CULL_FACE);
 
@@ -320,11 +330,25 @@ int main()
 			glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
 			glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 
+			ImGui::BeginGroup();
+			ImGui::Text("Color Controls");
+			float sliderWidth = (ImGui::GetContentRegionAvail().x / 2.0f) - 10.0f;
+			ImGui::PushItemWidth(sliderWidth);
+			if(ImGui::SliderFloat("Saturation", &saturation, 0, 1))
+			{
+				glUniform1f(getUniformLocation(program, "u_saturation", uniformCache), saturation);
+			}
+			if(ImGui::SliderFloat("Brightness", &brightness, 0, 1))
+			{
+				glUniform1f(getUniformLocation(program, "u_brightness", uniformCache), brightness);
+			}
+			ImGui::PopItemWidth();
+			ImGui::EndGroup();
 
-				lastTime = currentTime;
-				glClear(GL_COLOR_BUFFER_BIT);
+			lastTime = currentTime;
+			glClear(GL_COLOR_BUFFER_BIT);
 
-				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
 
 			ImGui::Render();
