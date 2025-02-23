@@ -25,6 +25,19 @@ float map(float x, float inMin, float inMax, float outMin, float outMax) {
 	return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
 
+vec3 hsvToRgb(float h, float s, float v) {
+    float p = v * (1.0 - s);
+    float q = v * (1.0 - s * fract(h * 6.0));
+    float t = v * (1.0 - s * (1.0 - fract(h * 6.0)));
+
+    if (h < 1.0/6.0) return vec3(v, t, p);
+    if (h < 2.0/6.0) return vec3(q, v, p);
+    if (h < 3.0/6.0) return vec3(p, v, t);
+    if (h < 4.0/6.0) return vec3(p, q, v);
+    if (h < 5.0/6.0) return vec3(t, p, v);
+    return vec3(v, p, q);
+}
+
 vec3 computeFragColor(vec2 uv) {
 	vec3 color;
 	float aspectRatio = u_resolution.x / u_resolution.y;
@@ -39,9 +52,9 @@ vec3 computeFragColor(vec2 uv) {
 	if (iter == u_MAX_ITERATIONS) {
 		color = vec3(0.0);
 	} else {
-        float t = 2 * 3.14159265 * float(iter) / float(u_BASE_ITERATIONS);
-        
-        color = vec3(0.5 + 0.5 * cos(t * 6.28), 0.5 + 0.5 * sin(t * 6.28), 0.5);
+        float t = float(iter) / float(u_BASE_ITERATIONS);
+		float hue = mod(t * 5.0, 1.0);
+        color = hsvToRgb(hue, 1.0, 1.0);
 	}
 	return color;
 }
