@@ -2,10 +2,9 @@
 
 precision highp float;
 
-in vec3 fragmentColor;
 in vec2 position;
 
-uniform vec2 u_resolution;
+uniform ivec2 u_resolution;
 uniform vec2 u_center;
 uniform float u_zoom;
 uniform int u_MAX_ITERATIONS;

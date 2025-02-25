@@ -248,22 +248,6 @@ int main()
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	float col[] = {
-		1.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 1.0f,
-		1.0f, 0.0f, 1.0f,
-		1.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 1.0f,
-		1.0f, 0.0f, 1.0f
-	};
-
-	GLuint colors;
-	glGenBuffers(1, &colors);
-	glBindBuffer(GL_ARRAY_BUFFER, colors);
-	glBufferData(GL_ARRAY_BUFFER, 9 * 2 * sizeof(float), col, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(1);
-
 	unsigned int indicies[] = {
 		0, 2, 1,
 		0, 1, 3
@@ -280,7 +264,7 @@ int main()
 	glUseProgram(program);
 
 	glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
-	glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
+	glUniform2i(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
 	glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
 	glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
@@ -327,7 +311,7 @@ int main()
 			}
 
 			glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
-			glUniform2f(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
+			glUniform2i(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
 			glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
 
 			ImGui::BeginGroup();
