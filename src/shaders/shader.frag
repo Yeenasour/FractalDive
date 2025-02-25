@@ -11,6 +11,7 @@ uniform int u_MAX_ITERATIONS;
 uniform int u_BASE_ITERATIONS;
 uniform float u_saturation;
 uniform float u_brightness;
+uniform vec2 u_julia_c;
 
 out vec4 screenColor;
 
@@ -42,8 +43,15 @@ vec3 hsvToRgb(float h, float s, float v) {
 vec3 computeFragColor(vec2 uv) {
 	vec3 color;
 	float aspectRatio = u_resolution.x / u_resolution.y;
-	vec2 c = u_center + (uv) * vec2(4.0 * aspectRatio, 4.0) / u_zoom;
-	vec2 z = vec2(0.0);
+	vec2 c;
+	vec2 z;
+	if (!isnan(u_julia_c.x) && !isnan(u_julia_c.y)) {
+		c = u_julia_c;
+		z = u_center + (uv) * vec2(4.0 * aspectRatio, 4.0) / u_zoom;
+	} else {
+		c = u_center + (uv) * vec2(4.0 * aspectRatio, 4.0) / u_zoom;
+		z = vec2(0.0);
+	}
 	int iter = 0;
 	while (length(z) < 2.0 && iter < u_MAX_ITERATIONS) {
 		z = compMul(z,z);

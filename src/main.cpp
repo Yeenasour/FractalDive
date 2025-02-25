@@ -25,7 +25,9 @@ struct ApplicationState
 	std::unordered_map<int, bool>* keyMap;
 	double mouseEnterX, mouseEnterY;
 	float dragStartCx, dragStartCy;
-	bool mouseHeld = false;
+	bool leftButtonHeld = false, rightButtonHeld = false;
+	double juliaCx = NAN;
+	double juliaCy = NAN;
 };
 
 static std::string readFile(const std::string& filePath) {
@@ -143,13 +145,20 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
-	if (as->mouseHeld)
-	{
-		double dx = as->mouseEnterX - xpos;
-        double dy = ypos - as->mouseEnterY;
+	double dx = as->mouseEnterX - xpos;
+    double dy = ypos - as->mouseEnterY;
 
-        as->window.cx = as->dragStartCx + (8 * dx / as->window.w) / as->window.zoom; 
-        as->window.cy = as->dragStartCy + (8 * dy / as->window.h) / as->window.zoom;
+    double coordX = as->dragStartCx + (8 * dx / as->window.w) / as->window.zoom; 
+	double coordY = as->dragStartCy + (8 * dy / as->window.h) / as->window.zoom;
+	if (as->leftButtonHeld)
+	{
+        as->window.cx = coordX;
+        as->window.cy = coordY;
+	}
+	else if (as->rightButtonHeld)
+	{
+        as->juliaCx = coordX;
+        as->juliaCy = coordY;
 	}
 }
 
@@ -157,10 +166,19 @@ void mouseCallback(GLFWwindow* window, int button, int action, int mods)
 {
 	if (ImGui::GetIO().WantCaptureMouse) return;
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
-	as->mouseHeld = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
+	as->leftButtonHeld = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
+	as->rightButtonHeld = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
 	glfwGetCursorPos(window, &as->mouseEnterX, &as->mouseEnterY);
-	as->dragStartCx = as->window.cx;
-    as->dragStartCy = as->window.cy;
+	if (as->leftButtonHeld)
+	{
+		as->dragStartCx = as->window.cx;
+    	as->dragStartCy = as->window.cy;
+	}
+	else if (!as->rightButtonHeld)
+	{
+		as->juliaCx = NAN;
+		as->juliaCy = NAN;
+	}
 }
 
 void handleKeyMovement(ApplicationState &as)
@@ -179,6 +197,7 @@ void handleKeyMovement(ApplicationState &as)
 	TODO Add support for both float and double in frag-shader
 			-buttons to switch during execution, and text-indicator
 	TODO Utilize compute shaders
+	TODO lock center when viewing juliaset, toggle with imgui button
 */
 
 int main()
@@ -270,6 +289,7 @@ int main()
 	glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
 	glUniform1f(getUniformLocation(program, "u_saturation", uniformCache), saturation);
 	glUniform1f(getUniformLocation(program, "u_brightness", uniformCache), brightness);
+	glUniform2f(getUniformLocation(program, "u_julia_c", uniformCache), applicationState.juliaCx, applicationState.juliaCy);
 
 	glEnable(GL_CULL_FACE);
 
@@ -313,6 +333,7 @@ int main()
 			glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
 			glUniform2i(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
 			glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
+			glUniform2f(getUniformLocation(program, "u_julia_c", uniformCache), applicationState.juliaCx, applicationState.juliaCy);
 
 			ImGui::BeginGroup();
 			ImGui::Text("Color Controls");
