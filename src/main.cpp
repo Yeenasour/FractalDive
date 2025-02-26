@@ -11,6 +11,10 @@
 #include <string>
 #include <unordered_map>
 
+enum {
+	MANDELBROT,
+	JULIASET
+};
 
 struct WindowState
 {
@@ -157,6 +161,7 @@ void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 	}
 	else if (as->rightButtonHeld)
 	{
+		if (std::isnan(as->juliaCx) || as->window.zoom > 8) return;
         as->juliaCx = coordX;
         as->juliaCy = coordY;
 	}
@@ -174,16 +179,11 @@ void mouseCallback(GLFWwindow* window, int button, int action, int mods)
 		as->dragStartCx = as->window.cx;
     	as->dragStartCy = as->window.cy;
 	}
-	else if (!as->rightButtonHeld)
-	{
-		as->juliaCx = NAN;
-		as->juliaCy = NAN;
-	}
 }
 
-void handleKeyMovement(ApplicationState &as)
+void handleKeyMovement(ApplicationState &as, double deltaTime)
 {
-	float moveSpeed = 0.05f / as.window.zoom;
+	double moveSpeed = 2.5f * deltaTime / as.window.zoom;
 	float dy = 0.0f, dx = 0.0f;
 	if ((*as.keyMap)[GLFW_KEY_W]) dy += moveSpeed;
 	if ((*as.keyMap)[GLFW_KEY_A]) dx -= moveSpeed;
@@ -193,12 +193,9 @@ void handleKeyMovement(ApplicationState &as)
 	as.window.cy += dy;
 }
 
-/*
-	TODO Add support for both float and double in frag-shader
-			-buttons to switch during execution, and text-indicator
-	TODO Utilize compute shaders
-	TODO lock center when viewing juliaset, toggle with imgui button
-*/
+ImVec4 GetButtonColor(bool isActive) {
+    return isActive ? ImVec4(0.0, 0.4, 1.0, 0.5) : ImVec4(0.0, 0.0, 0.0, 0.5);
+}
 
 int main()
 {
@@ -303,20 +300,47 @@ int main()
 
 	int targetFPS = maxFPS;
 	float targetFrameTime = 1.0f / targetFPS;
-	double lastTime = glfwGetTime();
+	double lastDrawTime = glfwGetTime();
+	double lastKeyTime = glfwGetTime();
 
 	while (!glfwWindowShouldClose(window)) 
 	{
 		glfwPollEvents();
 
-		handleKeyMovement(applicationState);
 		double currentTime = glfwGetTime();
-		double deltaTime = currentTime - lastTime;
+		double deltaDrawTime = currentTime - lastDrawTime;
+		double deltaKeyTime = currentTime - lastKeyTime;
+		handleKeyMovement(applicationState, deltaKeyTime);
+		lastKeyTime = currentTime;
 
-		if (deltaTime > targetFrameTime) {
+		if (deltaDrawTime > targetFrameTime) {
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
+
+			ImGui::BeginGroup();
+			ImGui::Text("Fractal Type");
+			ImGui::PushStyleColor(ImGuiCol_Button, GetButtonColor(std::isnan(applicationState.juliaCx)));
+			if (ImGui::Button("Mandelbrot"))
+			{
+				applicationState.juliaCx = NAN;
+				applicationState.juliaCy = NAN;
+				applicationState.window.zoom = 2.0,
+				applicationState.window.cx = -0.5;
+				applicationState.window.cy = 0.0;
+			}
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Button, GetButtonColor(!std::isnan(applicationState.juliaCx)));
+			if (ImGui::Button("Julia"))
+			{
+				applicationState.juliaCx = 0.0;
+				applicationState.juliaCy = 0.0;
+				applicationState.window.zoom = 2.0;
+				applicationState.window.cx = 0.0;
+				applicationState.window.cy = 0.0;
+			}
+			ImGui::PopStyleColor(2);
+			ImGui::EndGroup();
 
 			if (ImGui::SliderInt("FPS Limit", &targetFPS, 1, maxFPS)) {
 				targetFrameTime = 1.0f / targetFPS;  // Update the target frame time
@@ -350,7 +374,7 @@ int main()
 			ImGui::PopItemWidth();
 			ImGui::EndGroup();
 
-			lastTime = currentTime;
+			lastDrawTime = currentTime;
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
