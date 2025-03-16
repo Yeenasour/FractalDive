@@ -42,7 +42,7 @@ vec3 hsvToRgb(float h, float s, float v) {
 
 vec3 computeFragColor(vec2 uv) {
 	vec3 color;
-	float aspectRatio = u_resolution.x / u_resolution.y;
+	float aspectRatio = float(u_resolution.x) / float(u_resolution.y);
 	vec2 c;
 	vec2 z;
 	if (!isnan(u_julia_c.x) && !isnan(u_julia_c.y)) {
