@@ -5,6 +5,8 @@
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
+#include <FileUtils.h>
+#include <Shader.h>
 
 #include <fstream>
 #include <sstream>
@@ -33,72 +35,6 @@ struct ApplicationState
 	double juliaCx = NAN;
 	double juliaCy = NAN;
 };
-
-static std::string readFile(const std::string& filePath) {
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filePath << std::endl;
-        return "";
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-
-    return buffer.str();
-}
-
-static GLuint CompileShader(GLuint type, const std::string& source)
-{
-	GLuint shader = glCreateShader(type);
-	const char* src = source.c_str();
-	glShaderSource(shader, 1, &src, nullptr);
-	glCompileShader(shader);
-
-	GLint res;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &res);
-	if (res == GL_FALSE)
-	{
-		int len;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-		char* msg = (char*)alloca(len * sizeof(char));
-		glGetShaderInfoLog(shader, len, &len, msg);
-		std::cout << "Shader compilation failed! (" << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << ")" << std::endl;
-		std::cout << msg << std::endl;
-		glDeleteShader(shader);
-		return 0;
-	}
-
-	return shader;
-}
-
-static GLuint CreateShaderProgram(const std::string& vertexShader, const std::string& fragmentShader)
-{
-	GLuint program = glCreateProgram();
-
-	GLuint vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-	GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
-
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glValidateProgram(program);
-
-	glDeleteShader(vs);
-	glDeleteShader(fs);
-
-	return program;
-}
-
-GLint getUniformLocation(GLuint program, const std::string& name, std::unordered_map<std::string, GLint>& uniformCache)
-{
-    if (uniformCache.find(name) != uniformCache.end()) {
-        return uniformCache[name];
-    }
-    
-    GLint location = glGetUniformLocation(program, name.c_str());
-    uniformCache[name] = location;
-    return location;
-}
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -215,8 +151,6 @@ int main()
 	};
 	ApplicationState applicationState = {{-0.5, 0, 2.0, 1080, 1080}, &keyMap};
 
-	std::unordered_map<std::string, GLint> uniformCache;
-
 	if (!glfwInit()) {
 		std::cout << "GLFW failed to initialize" << std::endl;
 		return -1;
@@ -275,19 +209,17 @@ int main()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indicies, GL_STATIC_DRAW);
 
-	std::string vertexShader = readFile("../src/shaders/shader.vert");
-	std::string fragmentShader = readFile("../src/shaders/shader.frag");
-	GLuint program = CreateShaderProgram(vertexShader, fragmentShader);
-	glUseProgram(program);
+	Shader program = Shader("../src/shaders/shader.vert", "../src/shaders/shader.frag");
+	program.use();
 
-	glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
-	glUniform2i(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
-	glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
-	glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
-	glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
-	glUniform1f(getUniformLocation(program, "u_saturation", uniformCache), saturation);
-	glUniform1f(getUniformLocation(program, "u_brightness", uniformCache), brightness);
-	glUniform2f(getUniformLocation(program, "u_julia_c", uniformCache), applicationState.juliaCx, applicationState.juliaCy);
+	program.setUniform1f("u_zoom", applicationState.window.zoom);
+	program.setUniform2i("u_resolution", applicationState.window.w, applicationState.window.h);
+	program.setUniform2f("u_center", applicationState.window.cx, applicationState.window.cy);
+	program.setUniform1i("u_MAX_ITERATIONS", maxIterations);
+	program.setUniform1i("u_BASE_ITERATIONS", baseIterations);
+	program.setUniform1f("u_saturation", saturation);
+	program.setUniform1f("u_brightness", brightness);
+	program.setUniform2f("u_julia_c", applicationState.juliaCx, applicationState.juliaCy);
 
 	glEnable(GL_CULL_FACE);
 
@@ -348,17 +280,17 @@ int main()
 			}
 			if (ImGui::SliderInt("U_MAX_ITERATIONS", &maxIterations, 1, 1024))
 			{
-				glUniform1i(getUniformLocation(program, "u_MAX_ITERATIONS", uniformCache), maxIterations);
+				program.setUniform1i("u_MAX_ITERATIONS", maxIterations);
 			}
 			if (ImGui::SliderInt("U_BASE_ITERATIONS", &baseIterations, 1, 1024))
 			{
-				glUniform1i(getUniformLocation(program, "u_BASE_ITERATIONS", uniformCache), baseIterations);
+				program.setUniform1i("u_BASE_ITERATIONS", baseIterations);
 			}
 
-			glUniform1f(getUniformLocation(program, "u_zoom", uniformCache), applicationState.window.zoom);
-			glUniform2i(getUniformLocation(program, "u_resolution", uniformCache), applicationState.window.w, applicationState.window.h);
-			glUniform2f(getUniformLocation(program, "u_center", uniformCache), applicationState.window.cx, applicationState.window.cy);
-			glUniform2f(getUniformLocation(program, "u_julia_c", uniformCache), applicationState.juliaCx, applicationState.juliaCy);
+			program.setUniform1f("u_zoom", applicationState.window.zoom);
+			program.setUniform2i("u_resolution", applicationState.window.w, applicationState.window.h);
+			program.setUniform2f("u_center", applicationState.window.cx, applicationState.window.cy);
+			program.setUniform2f("u_julia_c", applicationState.juliaCx, applicationState.juliaCy);
 
 			ImGui::BeginGroup();
 			ImGui::Text("Color Controls");
@@ -366,11 +298,11 @@ int main()
 			ImGui::PushItemWidth(sliderWidth);
 			if(ImGui::SliderFloat("Saturation", &saturation, 0, 1))
 			{
-				glUniform1f(getUniformLocation(program, "u_saturation", uniformCache), saturation);
+				program.setUniform1f("u_saturation", saturation);
 			}
 			if(ImGui::SliderFloat("Brightness", &brightness, 0, 1))
 			{
-				glUniform1f(getUniformLocation(program, "u_brightness", uniformCache), brightness);
+				program.setUniform1f("u_brightness", brightness);
 			}
 			ImGui::PopItemWidth();
 			ImGui::EndGroup();

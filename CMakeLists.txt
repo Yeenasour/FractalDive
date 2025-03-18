@@ -48,7 +48,9 @@ file(GLOB IMGUI_SOURCES
 	"include/imgui/backends/imgui_impl_glfw.cpp" 
 	"include/imgui/backends/imgui_impl_opengl3.cpp")
 
-add_executable(FractalDive src/main.cpp ${IMGUI_SOURCES})
+file(GLOB SOURCES "*.cpp" "src/*.cpp")
+
+add_executable(FractalDive ${SOURCES} ${IMGUI_SOURCES})
 
 target_compile_definitions(FractalDive PRIVATE GLEW_STATIC)
 
