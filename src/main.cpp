@@ -179,6 +179,7 @@ void mouseCallback(GLFWwindow* window, int button, int action, int mods)
 		as->dragStartCx = as->window.cx;
     	as->dragStartCy = as->window.cy;
 	}
+	// BUG mouse drag doesn't work correctly when window resizes from default
 }
 
 void handleKeyMovement(ApplicationState &as, double deltaTime)
