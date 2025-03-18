@@ -28,12 +28,11 @@ struct WindowState
 struct ApplicationState
 {
 	WindowState window;
-	std::unordered_map<int, bool>* keyMap;
-	double mouseEnterX, mouseEnterY;
-	float dragStartCx, dragStartCy;
+	std::unordered_map<int, bool> keyMap;
+	double mouseClickX, mouseClickY;
+	double prevCx, prevCy;
+	double juliaCx = NAN, juliaCy = NAN;
 	bool leftButtonHeld = false, rightButtonHeld = false;
-	double juliaCx = NAN;
-	double juliaCy = NAN;
 };
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
@@ -64,16 +63,17 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
-	std::unordered_map<int, bool> *keyMap = as->keyMap;
-	if (keyMap->find(key) != keyMap->end())
+	//std::unordered_map<int, bool> *keyMap = as->keyMap;
+	auto& keyMap = as->keyMap;
+	if (keyMap.find(key) != keyMap.end())
 	{
 		if (action == GLFW_PRESS)
 		{
-			(*keyMap)[key] = true;
+			keyMap[key] = true;
 		}
 		else if (action == GLFW_RELEASE)
 		{
-			(*keyMap)[key] = false;
+			keyMap[key] = false;
 		}
 	}
 	if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
@@ -85,11 +85,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
-	double dx = as->mouseEnterX - xpos;
-    double dy = ypos - as->mouseEnterY;
+	double dx = as->mouseClickX - xpos;
+    double dy = ypos - as->mouseClickY;
 
-    double coordX = as->dragStartCx + (8 * dx / as->window.w) / as->window.zoom; 
-	double coordY = as->dragStartCy + (8 * dy / as->window.h) / as->window.zoom;
+	// 135 is from 1080 / 8,
+    double coordX = as->prevCx + dx / (135 * as->window.zoom); 
+	double coordY = as->prevCy + dy / (135 * as->window.zoom);
 	if (as->leftButtonHeld)
 	{
         as->window.cx = coordX;
@@ -109,23 +110,22 @@ void mouseCallback(GLFWwindow* window, int button, int action, int mods)
 	ApplicationState* as = static_cast<ApplicationState*>(glfwGetWindowUserPointer(window));
 	as->leftButtonHeld = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
 	as->rightButtonHeld = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
-	glfwGetCursorPos(window, &as->mouseEnterX, &as->mouseEnterY);
+	glfwGetCursorPos(window, &as->mouseClickX, &as->mouseClickY);
 	if (as->leftButtonHeld)
 	{
-		as->dragStartCx = as->window.cx;
-    	as->dragStartCy = as->window.cy;
+		as->prevCx = as->window.cx;
+    	as->prevCy = as->window.cy;
 	}
-	// BUG mouse drag doesn't work correctly when window resizes from default
 }
 
 void handleKeyMovement(ApplicationState &as, double deltaTime)
 {
 	double moveSpeed = 2.5f * deltaTime / as.window.zoom;
 	float dy = 0.0f, dx = 0.0f;
-	if ((*as.keyMap)[GLFW_KEY_W]) dy += moveSpeed;
-	if ((*as.keyMap)[GLFW_KEY_A]) dx -= moveSpeed;
-	if ((*as.keyMap)[GLFW_KEY_S]) dy -= moveSpeed;
-	if ((*as.keyMap)[GLFW_KEY_D]) dx += moveSpeed;
+	if (as.keyMap[GLFW_KEY_W]) dy += moveSpeed;
+	if (as.keyMap[GLFW_KEY_A]) dx -= moveSpeed;
+	if (as.keyMap[GLFW_KEY_S]) dy -= moveSpeed;
+	if (as.keyMap[GLFW_KEY_D]) dx += moveSpeed;
 	as.window.cx += dx;
 	as.window.cy += dy;
 }
@@ -143,13 +143,15 @@ int main()
 	float saturation = 1.0f;
 	float brightness = 1.0f;
 	
-	std::unordered_map<int, bool> keyMap = {
-		{GLFW_KEY_W, false},
-		{GLFW_KEY_A, false},
-		{GLFW_KEY_S, false},
-		{GLFW_KEY_D, false}
+	ApplicationState applicationState = {
+		{-0.5, 0, 2.0, 1080, 1080},
+		{
+			{GLFW_KEY_W, false},
+			{GLFW_KEY_A, false},
+			{GLFW_KEY_S, false},
+			{GLFW_KEY_D, false}
+		}
 	};
-	ApplicationState applicationState = {{-0.5, 0, 2.0, 1080, 1080}, &keyMap};
 
 	if (!glfwInit()) {
 		std::cout << "GLFW failed to initialize" << std::endl;
