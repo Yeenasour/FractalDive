@@ -43,7 +43,10 @@ if(NOT glm_FOUND)
 	FetchContent_MakeAvailable(glm)
 endif()
 
-file(GLOB IMGUI_SOURCES "include/imgui/*.cpp" "include/imgui/backends/imgui_impl_glfw.cpp" "include/imgui/backends/imgui_impl_opengl3.cpp")
+file(GLOB IMGUI_SOURCES 
+	"include/imgui/*.cpp" 
+	"include/imgui/backends/imgui_impl_glfw.cpp" 
+	"include/imgui/backends/imgui_impl_opengl3.cpp")
 
 add_executable(FractalDive src/main.cpp ${IMGUI_SOURCES})
 
