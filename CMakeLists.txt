@@ -6,6 +6,10 @@ find_package(OpenGL REQUIRED)
 
 find_package(glfw3 3.4 QUIET)
 if(NOT glfw3_FOUND)
+	if(UNIX)
+		set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+		set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE)
+	endif()
 	FetchContent_Declare(
 		glfw3
 		GIT_REPOSITORY	https://github.com/glfw/glfw.git
